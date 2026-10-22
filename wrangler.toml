@@ -22,4 +22,4 @@ script_name = "iotdeck-hub-live"
 
 [vars]
 PUBLIC_URL = "https://iotdeck-site.baraaaljilani.workers.dev"
-GOOGLE_CLIENT_ID = ""
+GOOGLE_CLIENT_ID = "931506749409-dhkhgrpkb6uml49ud7669u0927ab40l3.apps.googleusercontent.com"
