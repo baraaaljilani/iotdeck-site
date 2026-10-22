@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IoTDeck — Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2713%27 fill=%27%237c8cff%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%275%27 fill=%27%233ee3b5%27/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" aria-label="Devices">
+      <div class="sidebar-head">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"></span>IoTDeck</div>
+      </div>
+
+      <div class="sidebar-head">
+        <span class="kicker">Devices</span>
+        <button class="btn btn-ghost" id="add-device" title="Add device" aria-label="Add device" style="height:32px;padding:0 10px;">+ New</button>
+      </div>
+
+      <nav class="device-list" id="device-list" aria-label="Your devices"></nav>
+
+      <div class="sidebar-foot">
+        <div class="user-chip">
+          <span class="avatar" id="avatar" aria-hidden="true">·</span>
+          <span class="who" id="user-email"></span>
+        </div>
+        <button class="btn btn-ghost btn-block" id="logout">Sign out</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="greeting">Dashboard</h1>
+          <p class="sub" id="subtitle">Loading your devices…</p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="add-device-2">Add device</button>
+          <button class="btn btn-primary" id="add-widget">Add widget</button>
+        </div>
+      </header>
+
+      <section class="stats" aria-label="Summary">
+        <div class="card stat"><div class="label">Devices</div><div class="value" id="stat-devices">0</div></div>
+        <div class="card stat"><div class="label">Online now</div><div class="value" id="stat-online">0</div></div>
+        <div class="card stat"><div class="label">Widgets</div><div class="value" id="stat-widgets">0</div></div>
+      </section>
+
+      <div class="actions" id="filter-row" style="margin-bottom:16px;"></div>
+
+      <section class="grid" id="grid" aria-live="polite"></section>
+    </main>
+  </div>
+
+  <!-- Add device modal -->
+  <div class="modal-backdrop" id="device-modal" role="dialog" aria-modal="true" aria-labelledby="device-title">
+    <div class="card modal">
+      <div id="device-step-1">
+        <h2 id="device-title">Add a device</h2>
+        <p class="lead">Give it a name. You'll get a one-time key to paste into the device.</p>
+        <form id="device-form" class="form" novalidate>
+          <div class="field">
+            <label for="device-name">Device name</label>
+            <input class="input" id="device-name" maxlength="60" placeholder="Greenhouse sensor" required>
+          </div>
+          <p class="error" id="device-error" role="alert"></p>
+          <div class="modal-actions" style="margin-top:4px;">
+            <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+            <button type="submit" class="btn btn-primary">Create device</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="device-step-2" class="hidden">
+        <h2>Your device key</h2>
+        <p class="lead">Copy this now. For your security it can't be shown again.</p>
+        <div class="key-box" id="device-key"></div>
+        <div class="actions" style="margin:12px 0 18px;">
+          <button class="btn" id="copy-key">Copy key</button>
+        </div>
+        <div class="warning-note">
+          <span aria-hidden="true">●</span>
+          <span>Keep this key secret. Anyone who has it can send data to this device's dashboard.</span>
+        </div>
+        <p class="kicker" style="margin:22px 0 10px;">Quick start (ESP32, Arduino IDE)</p>
+        <pre class="code" id="device-snippet"></pre>
+        <div class="modal-actions">
+          <button class="btn btn-primary" data-close>Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add widget modal -->
+  <div class="modal-backdrop" id="widget-modal" role="dialog" aria-modal="true" aria-labelledby="widget-title">
+    <div class="card modal">
+      <h2 id="widget-title">Add a widget</h2>
+      <p class="lead">Choose a device and the value you want to see or control.</p>
+      <form id="widget-form" class="form" novalidate>
+        <div class="field">
+          <label for="widget-device">Device</label>
+          <select class="input" id="widget-device" required></select>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="widget-type">Widget</label>
+            <select class="input" id="widget-type">
+              <option value="value">Value</option>
+              <option value="gauge">Gauge</option>
+              <option value="line">Trend line</option>
+              <option value="toggle">Switch (control)</option>
+              <option value="button">Button (control)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="widget-field">Data field</label>
+            <input class="input" id="widget-field" list="field-options" placeholder="temperature" maxlength="32" required>
+            <datalist id="field-options"></datalist>
+          </div>
+        </div>
+        <div class="field">
+          <label for="widget-title-input">Title</label>
+          <input class="input" id="widget-title-input" maxlength="40" placeholder="Greenhouse temperature">
+        </div>
+        <div class="row-2" id="unit-row">
+          <div class="field">
+            <label for="widget-unit">Unit (optional)</label>
+            <input class="input" id="widget-unit" maxlength="8" placeholder="°C">
+          </div>
+          <div class="field" id="gauge-range" hidden>
+            <label>Range</label>
+            <div class="row-2" style="gap:8px;">
+              <input class="input" id="widget-min" type="number" value="0" aria-label="Minimum">
+              <input class="input" id="widget-max" type="number" value="100" aria-label="Maximum">
+            </div>
+          </div>
+        </div>
+        <p class="error" id="widget-error" role="alert"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+          <button type="submit" class="btn btn-primary">Add widget</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="sparkFill" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="#7c8cff" stop-opacity="0.35"/>
+        <stop offset="100%" stop-color="#7c8cff" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="gaugeGrad" x1="0" x2="1" y1="0" y2="1">
+        <stop offset="0%" stop-color="#7c8cff"/>
+        <stop offset="100%" stop-color="#3ee3b5"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <script src="/dashboard.js" defer></script>
+</body>
+</html>
