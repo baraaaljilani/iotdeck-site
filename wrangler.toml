@@ -1,0 +1,25 @@
+name = "iotdeck-site"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# Website files from public/
+[assets]
+directory = "./public"
+binding = "ASSETS"
+html_handling = "drop-trailing-slash"
+
+# Database
+[[d1_databases]]
+binding = "DB"
+database_name = "iotdeck"
+database_id = "ec97a199-c1bd-4d8f-842b-051635017f60"
+
+# Device hub (class lives in the iotdeck-hub-live Worker)
+[[durable_objects.bindings]]
+name = "HUB"
+class_name = "DeviceHub"
+script_name = "iotdeck-hub-live"
+
+[vars]
+PUBLIC_URL = "https://iotdeck-site.baraaaljilani.workers.dev"
+GOOGLE_CLIENT_ID = ""
