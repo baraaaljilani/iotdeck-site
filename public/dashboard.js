@@ -705,6 +705,23 @@
 
     syncWidgetFormType();
     await refreshAll();
+    setInterval(async () => {
+      try {
+        const { devices } = await api('/api/devices');
+        for (const d of devices) {
+          const cur = state.devices.get(d.id);
+          if (!cur) { state.devices.set(d.id, d); continue; }
+          const changed = cur.lastSeen !== d.lastSeen;
+          cur.name = d.name;
+          cur.lastSeen = d.lastSeen;
+          cur.latest = d.latest;
+          cur.online = d.online;
+          if (changed) refreshDevice(d.id);
+        }
+        renderSidebar();
+        renderStats();
+      } catch {}
+    }, 5000);
     setInterval(() => { renderSidebar(); renderStats(); updateTimestamps(); }, 5000);
     setInterval(updateTimestamps, 1000);
   }
