@@ -418,7 +418,7 @@
 
   async function toggleControl(widget, card) {
     const device = state.devices.get(widget.deviceId);
-    const current = Boolean(device && device.latest && device.latest[widget.field]);
+    const current = card.querySelector('[data-role="switch"]').getAttribute('aria-checked') === 'true';
     const sw = card.querySelector('[data-role="switch"]');
     sw.disabled = true;
     sw.setAttribute('aria-checked', String(!current));
