@@ -42,6 +42,7 @@
     cards: new Map(), // widget id -> element
     history: new Map(), // `${deviceId}` -> [{ ts, data }]
     sockets: new Map(), // deviceId -> WebSocket
+    pending: new Map(), // widget id -> { value, until } for switches you just set
     filter: null, // deviceId or null
   };
 
@@ -369,10 +370,15 @@
     }
 
     if (widget.type === 'toggle') {
-      const on = Boolean(raw);
+      const pend = state.pending.get(widget.id);
+      let on = Boolean(raw);
+      if (pend) {
+        if (pend.value === Boolean(raw) || Date.now() > pend.until) state.pending.delete(widget.id);
+        else on = pend.value;
+      }
       const sw = card.querySelector('[data-role="switch"]');
       sw.setAttribute('aria-checked', String(on));
-      card.querySelector('[data-role="state"]').textContent = raw === undefined ? 'Waiting for data' : on ? 'On' : 'Off';
+      card.querySelector('[data-role="state"]').textContent = raw === undefined && !pend ? 'Waiting for data' : on ? 'On' : 'Off';
       if (!sw.dataset.bound) {
         sw.dataset.bound = '1';
         sw.addEventListener('click', () => toggleControl(widget, card));
@@ -388,7 +394,11 @@
     }
 
     const stamp = card.querySelector('[data-role="updated"]');
-    stamp.textContent = device && device.lastSeen ? `Updated ${timeAgo(device.lastSeen)}` : 'Waiting for first reading';
+    if (widget.type === 'toggle' || widget.type === 'button') {
+      stamp.textContent = '';
+    } else {
+      stamp.textContent = device && device.lastSeen ? `Updated ${timeAgo(device.lastSeen)}` : 'Waiting for first reading';
+    }
   }
 
   function sparkPaths(values) {
@@ -417,19 +427,17 @@
   }
 
   async function toggleControl(widget, card) {
-    const device = state.devices.get(widget.deviceId);
-    const current = card.querySelector('[data-role="switch"]').getAttribute('aria-checked') === 'true';
     const sw = card.querySelector('[data-role="switch"]');
-    sw.disabled = true;
-    sw.setAttribute('aria-checked', String(!current));
+    const next = sw.getAttribute('aria-checked') !== 'true';
+    state.pending.set(widget.id, { value: next, until: Date.now() + 4000 });
+    sw.setAttribute('aria-checked', String(next));
+    card.querySelector('[data-role="state"]').textContent = next ? 'On' : 'Off';
     try {
-      const res = await sendCommand(widget.deviceId, widget.field, !current);
-      toast(res.delivered ? 'Sent to device' : 'Queued. Device will receive it when online');
+      await sendCommand(widget.deviceId, widget.field, next);
     } catch (err) {
-      sw.setAttribute('aria-checked', String(current));
+      state.pending.delete(widget.id);
       toast(err.message, 'error');
-    } finally {
-      sw.disabled = false;
+      updateWidgetCard(card, widget);
     }
   }
 
